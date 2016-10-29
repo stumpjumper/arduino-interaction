@@ -1,0 +1,13 @@
+*.a
+*.o
+*_unittest
+*~
+.DS_*
+TAGS
+depend
+depend.bak
+Makefile.bak
+integration_test
+Icon
+\#*#
+.#*#
