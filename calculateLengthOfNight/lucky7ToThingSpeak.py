@@ -63,7 +63,14 @@ def main(cmdLineArgs = sys.argv):
             if outputStream:
               outputStream.close()
             outputStream = makeOutputStream(outputFileName)
-          outputDict = ast.literal_eval(line)
+          try:
+            outputDict = ast.literal_eval(line)
+          except Exception, e:
+            print "'outputDict = ast.literal_eval(line)' error"
+            try:
+              print str(e)
+            except:
+              print "  Sorry, could not print ast.literal_eval()  error. Continuing..."
           print outputDict
           print >>outputStream , outputDict
           outputStream.flush()
