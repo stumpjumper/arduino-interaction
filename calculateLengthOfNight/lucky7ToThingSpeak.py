@@ -67,22 +67,32 @@ def main(cmdLineArgs = sys.argv):
           print outputDict
           print >>outputStream , outputDict
           outputStream.flush()
-          channelKeys = [1,2,5,6]
-          channelDict = {1:outputDict[channelKeys[0]][0],
-                         2:outputDict[channelKeys[1]][0],
-                         3:outputDict[channelKeys[2]][0],
-                         4:outputDict[channelKeys[3]][0],
-                         5:outputDict['v'],
-                         6:outputDict['p'],
-                         7:modeMap[outputDict['m']],
-                         8:outputDict['lN']}
-          print "channelDict =", channelDict
           try:
-            response = channel.update(channelDict)
-            print response
+            channelKeys = [1,2,5,6]
+            channelDict = {1:outputDict[channelKeys[0]][0],
+                           2:outputDict[channelKeys[1]][0],
+                           3:outputDict[channelKeys[2]][0],
+                           4:outputDict[channelKeys[3]][0],
+                           5:outputDict['v'],
+                           6:outputDict['p'],
+                           7:modeMap[outputDict['m']],
+                           8:outputDict['lN']}
+            print "channelDict =", channelDict
+            try:
+              response = channel.update(channelDict)
+              print response
+            except Exception, e:
+              print "channel.update(channelDict) failed:"
+              try:
+                print str(e)
+              except:
+                print "  Sorry, could not print channel.update() error. Continuing..."
           except Exception, e:
-            print "channel.update(channelDict) failed:"
-            print str(e)
+            print "Creation of channelDict failed:"
+            try:
+              print str(e)
+            except:
+              print "  Sorry, could not print creation error.  Continuing..."
 
     print "Sleeping for %s seconds" % localFrequency
     time.sleep(localFrequency)
