@@ -116,12 +116,13 @@ class TCPClientServer(object):
     msg = self.recvMsgPart(msgLength)
     return msg
 
-  def shutdownAndClose(self):
+  def shutdownAndClose(self,closeOnly=False):
     if not self.sock2:
       return
-    
-    print >>sys.stderr, 'shuting down socket'
-    self.sock2.shutdown(socket.SHUT_RDWR)
+
+    if not closeOnly:
+      print >>sys.stderr, 'shuting down socket'
+      self.sock2.shutdown(socket.SHUT_RDWR)
     print >>sys.stderr, 'closing socket'
     self.sock2.close()
 
@@ -150,6 +151,8 @@ def main(cmdLineArgs = sys.argv[1:]):
   tcpClientServer = None
   hostname = 'localhost'
   port     = 10000
+
+  closeOnly = False
   
   assert len(cmdLineArgs) > 0, \
          "First arg must be 'client' or 'server'"
@@ -167,6 +170,7 @@ def main(cmdLineArgs = sys.argv[1:]):
       msg = tcpClientServer.recvMsg()
       print >>sys.stderr, "Recieved message back: '%s'" % msg
     else:
+      closeOnly = True
       tcpArduinoServer = TCPArduinoServer()
       tcpClientServer = TCPClientServer.setupServer(hostname, port)
       try:
@@ -183,9 +187,9 @@ def main(cmdLineArgs = sys.argv[1:]):
     raise
 
   finally:
-    print >>sys.stderr, 'shuting down and closing socket'
+    print >>sys.stderr, "Cleaning up"
     if tcpClientServer:
-      tcpClientServer.shutdownAndClose()
+      tcpClientServer.shutdownAndClose(closeOnly)
         
 
 if (__name__ == '__main__'):
