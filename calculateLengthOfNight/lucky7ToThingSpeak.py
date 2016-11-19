@@ -46,7 +46,8 @@ usage: %prog [-h|--help] [Options] serial_port id config_file
                     default=False,
                     dest="noOp",
                     help=help)
-  help="Root name of logfile.  Default is '%s'." % defaultLogFileRoot
+  help="Root name of logfile.  Default is '%s', " % defaultLogFileRoot
+  help+="which produces the log file '%s.2015-08-17.log'" % defaultLogFileRoot
   parser.add_option("-l", "--logfileroot",
                     action="store", type="string", 
                     default=defaultLogFileRoot,
@@ -117,12 +118,6 @@ def main(cmdLineArgs):
 
   currentDateStamp = None
   outputStream     = None
-
-  if len(cmdLineArgs) != 2:
-    print >>sys.stderr, "readArdiono: Need two args: <serial_port> <output_file_root>"
-    print >>sys.stderr, "             Example: readArdiono /dev/cu.usbmodemfd121 lucky7ToThingSpeak"
-    print >>sys.stderr, "             Produces the log file lucky7ToThingSpeak.2015-08-17.log on Aug. 17, 2015"
-    sys.exit(1)
 
   ser = serial.Serial(serialPort,115200)
   time.sleep(5)
