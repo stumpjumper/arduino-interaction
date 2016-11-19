@@ -6,14 +6,63 @@ import sys
 import time
 import ast
 import thingspeak
+import configparser
+from optparse import OptionParser
 
-# ThingSpeak keys
-channel_id = "176582"
-write_key  = "VHTF9TVYRZCCPY77"
-
-frequency = 60 # Record data at this frequency in seconds
+config = configparser.ConfigParser()
 
 modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
+
+(execDirName,execName) = os.path.split(sys.argv[0])
+execBaseName = os.path.splitext(execName)[0]
+defaultLogFileRoot = "/tmp/"+execBaseName
+
+def setupCmdLineArgs(cmdLineArgs):
+  usage = """\
+usage: %prog [-h|--help] [Options] serial_port id config_file
+       where:
+         -h|--help to see Options
+
+         serial_port =
+           Serial port from which to read
+         id_key = 
+           The key of which dictionary to read in config_file.
+           This maps the identifcation of the Aurdino to connect to.
+         config_file = 
+           File containing configuration data in the form of a dictionary
+           where the id_key is used as described above
+"""
+  parser = OptionParser(usage)
+  help="Verbose mode."
+  parser.add_option("-v", "--verbose",
+                    action="store_true", 
+                    default=False,
+                    dest="verbose",
+                    help=help)
+  help="No operation, just read data file and echo it"
+  parser.add_option("-n", "--noOp",
+                    action="store_true", 
+                    default=False,
+                    dest="noOp",
+                    help=help)
+  help="Root name of logfile.  Default is '%s'." % defaultLogFileRoot
+  parser.add_option("-l", "--logfileroot",
+                    action="store", type="string", 
+                    default=defaultLogFileRoot,
+                    dest="logFileRoot",
+                    help=help)
+
+  (cmdLineOptions, cmdLineArgs) = parser.parse_args(cmdLineArgs)
+
+  if cmdLineOptions.verbose:
+    print "cmdLineOptions.verbose = '%s'" % cmdLineOptions.verbose
+    for index in range(0,len(cmdLineArgs)):
+      print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
+
+  if len(cmdLineArgs) != 3:
+    parser.error("Must specify a serial port, id and config filename on the command line.")
+
+  return (cmdLineOptions, cmdLineArgs)
 
 def createDateStamp():
   return time.strftime("%Y-%m-%d",time.localtime())
@@ -21,10 +70,47 @@ def createDateStamp():
 def makeOutputStream(outputFileName):
   return open(outputFileName,'a')
 
-def makeOutputFileName(outputFileRoot, dateStamp):
-  return  outputFileRoot + "." + createDateStamp() + ".log"
+def makeOutputFileName(logFileRoot, dateStamp):
+  return  logFileRoot + "." + createDateStamp() + ".log"
 
-def main(cmdLineArgs = sys.argv):
+def readConfigData(configFilename, idKey):
+  with open(configFilename,'r') as configStream:
+    configData = configStream.read()
+
+  dataDict = ast.literal_eval(configData)
+  assert dataDict.has_key(idKey),\
+    "Could not find key '%s' in file '%s'. Keys in file are '%s'" %\
+    (idKey, configFilename, dataDict.keys())
+
+  return dataDict[idKey]
+
+def main(cmdLineArgs):
+  (clo, cla) = setupCmdLineArgs(cmdLineArgs)
+  serialPort     = cla[0]
+  idKey          = cla[1]
+  configFilename = cla[2]
+  logFileRoot    = clo.logFileRoot
+  
+  if clo.verbose or clo.noOp:
+    print "verbose        =", clo.verbose
+    print "noOp           =", clo.noOp
+    print "serialPort     =", serialPort
+    print "idKey          =", idKey
+    print "configFilename =", configFilename
+    print "logFileRoot    =", logFileRoot
+
+  dataDict = readConfigData(configFilename, idKey)
+
+  if clo.verbose or clo.noOp:
+    print "dataDict:"
+    print dataDict
+
+  if clo.noOp:
+    sys.exit(0)
+
+  channel_id = dataDict["channel_id"]
+  write_key  = dataDict["write_key"]
+  frequency  = dataDict["update_frequency"]
 
   channel = thingspeak.Channel(id=channel_id,write_key=write_key)
 
@@ -36,12 +122,6 @@ def main(cmdLineArgs = sys.argv):
     print >>sys.stderr, "             Example: readArdiono /dev/cu.usbmodemfd121 lucky7ToThingSpeak"
     print >>sys.stderr, "             Produces the log file lucky7ToThingSpeak.2015-08-17.log on Aug. 17, 2015"
     sys.exit(1)
-
-  serialPort = cmdLineArgs[0]
-  outputFileRoot = cmdLineArgs[1]
-
-  print "serialPort     =", serialPort    
-  print "outputFileRoot =", outputFileRoot
 
   ser = serial.Serial(serialPort,115200)
   time.sleep(5)
@@ -58,7 +138,7 @@ def main(cmdLineArgs = sys.argv):
           localFrequency = frequency
           if currentDateStamp != createDateStamp():
             currentDateStamp = createDateStamp()
-            outputFileName = makeOutputFileName(outputFileRoot, createDateStamp())
+            outputFileName = makeOutputFileName(logFileRoot, createDateStamp())
             print "New outputfile = '%s'" % outputFileName
             if outputStream:
               outputStream.close()
@@ -108,4 +188,3 @@ def main(cmdLineArgs = sys.argv):
 
 if (__name__ == '__main__'):
   main(sys.argv[1:])
-    
