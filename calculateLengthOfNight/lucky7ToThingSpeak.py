@@ -24,8 +24,9 @@ usage: %prog [-h|--help] [Options] serial_port id config_file
          -h|--help to see Options
 
          serial_port =
-           Serial port from which to read. Hing: Do a 
-           "grep dmesg | grep tty" and look at last serial port added
+           Serial port from which to read. Hint: Do a 
+           "grep dmesg | grep tty" and look at last serial port added.
+           Usually looks something like /dev/ttyACM0 or /dev/ttyACM1.
          id_key = 
            The key of which dictionary to read in config_file.
            This maps the identifcation of the Aurdino to connect to.
