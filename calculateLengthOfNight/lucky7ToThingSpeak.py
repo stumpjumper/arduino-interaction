@@ -152,6 +152,7 @@ def main(cmdLineArgs):
           print >>outputStream , outputDict
           outputStream.flush()
           try:
+            line = time.asctime() + " " + line
             channelKeys = [1,2,5,6]
             channelDict = {1:outputDict[channelKeys[0]][0],
                            2:outputDict[channelKeys[1]][0],
@@ -160,7 +161,8 @@ def main(cmdLineArgs):
                            5:outputDict['v'],
                            6:outputDict['p'],
                            7:modeMap[outputDict['m']],
-                           8:outputDict['lN']}
+                           8:outputDict['lN'],
+                           "status":line}
             print "channelDict =", channelDict
             try:
               response = channel.update(channelDict)
