@@ -1,0 +1,7 @@
+Name            Virtual Address
+---------       ---------------
+aalturbo        10.19.0.3
+b52testpi       10.19.0.22
+b29testpi       10.19.0.26
+b29             10.19.0.29
+docentserver    10.19.0.107
