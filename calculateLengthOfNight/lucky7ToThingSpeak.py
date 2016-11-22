@@ -6,10 +6,7 @@ import sys
 import time
 import ast
 import thingspeak
-import configparser
 from optparse import OptionParser
-
-config = configparser.ConfigParser()
 
 modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
 
