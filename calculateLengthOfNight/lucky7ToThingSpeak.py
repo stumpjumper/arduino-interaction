@@ -109,9 +109,10 @@ def main(cmdLineArgs):
   if clo.noOp:
     sys.exit(0)
 
-  channel_id = dataDict["channel_id"]
-  write_key  = dataDict["write_key"]
-  frequency  = dataDict["update_frequency"]
+  channel_id  = dataDict["channel_id"]
+  write_key   = dataDict["write_key"]
+  frequency   = dataDict["update_frequency"]
+  channelKeys = dataDict["channel_keys"]
 
   channel = thingspeak.Channel(id=channel_id,write_key=write_key)
 
@@ -151,7 +152,6 @@ def main(cmdLineArgs):
           outputStream.flush()
           try:
             line = time.asctime() + " " + line
-            channelKeys = [1,2,5,6]
             channelDict = {1:outputDict[channelKeys[0]][0],
                            2:outputDict[channelKeys[1]][0],
                            3:outputDict[channelKeys[2]][0],
