@@ -6,6 +6,8 @@ import sys
 import time
 import ast
 import thingspeak
+import signal
+
 from optparse import OptionParser
 
 modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
@@ -13,6 +15,12 @@ modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
 (execDirName,execName) = os.path.split(sys.argv[0])
 execBaseName = os.path.splitext(execName)[0]
 defaultLogFileRoot = "/tmp/"+execBaseName
+
+class MySignalCaughtException(Exception):
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
 
 def setupCmdLineArgs(cmdLineArgs):
   usage = """\
@@ -87,6 +95,9 @@ def readConfigData(configFilename,ser):
 
   return dataDict[idKey]
 
+def handler(signum, frame):
+  raise MySignalCaughtException("Signal caught")
+
 def getIdKey(bannerToKeyMap,ser):
   idKey = None
   ser.write('i')
@@ -143,6 +154,9 @@ def main(cmdLineArgs):
   currentDateStamp = None
   outputStream     = None
 
+  # Register the signal function handler
+  signal.signal(signal.SIGALRM, handler)
+
   while True:
     ser.write('?')
     buffer = ser.read(ser.inWaiting())
@@ -184,18 +198,24 @@ def main(cmdLineArgs):
                            "status":line}
             print "channelDict =", channelDict
             try:
+              signal.alarm(120) # Throw MySignalCaughtException in (n) secs
               response = channel.update(channelDict)
+              signal.alarm(0) # Cancel alarm
               print response
+            except MySignalCaughtException, e:
+              print "Signal alarm caught, channel.update(channelDict) timed out.  Continuing..."
             except Exception, e:
               print "channel.update(channelDict) failed:"
               try:
                 print str(e)
+                print "Continuing..."
               except:
                 print "  Sorry, could not print channel.update() error. Continuing..."
           except Exception, e:
             print "Creation of channelDict failed:"
             try:
               print str(e)
+              print "Continuing..."
             except:
               print "  Sorry, could not print creation error.  Continuing..."
 
