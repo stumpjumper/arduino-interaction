@@ -4,6 +4,7 @@ import serial
 import os
 import sys
 import readline
+import select
 from optparse import OptionParser
 
 
@@ -52,7 +53,7 @@ def readInputFromTerminal(prompt,timeout):
   inputLine=None
   print prompt,
   sys.stdout.flush()
-  rlist, _, _ = select([sys.stdin], [], [], timeout)
+  rlist, _, _ = select.select([sys.stdin], [], [], timeout)
   if rlist:
     inputLine = sys.stdin.readline()
     print "Read: ", inputLine
