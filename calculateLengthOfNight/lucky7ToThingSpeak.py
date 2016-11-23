@@ -98,10 +98,10 @@ def getKey(bannerToKeyMap):
           key = bannerToKeyMap[banner]
           break
 
-   assert key, "Could not match any banner in lines to bannerToKeyMap\n" +\
-     "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannertoKeyMap)
+  assert key, "Could not match any banner in lines to bannerToKeyMap\n" +\
+    "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannertoKeyMap)
 
-   return key
+  return key
 
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
