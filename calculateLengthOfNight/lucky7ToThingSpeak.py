@@ -7,6 +7,7 @@ import time
 import ast
 import thingspeak
 import signal
+import select
 
 from optparse import OptionParser
 
@@ -15,6 +16,8 @@ modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
 (execDirName,execName) = os.path.split(sys.argv[0])
 execBaseName = os.path.splitext(execName)[0]
 defaultLogFileRoot = "/tmp/"+execBaseName
+
+mySerial = None
 
 class MySignalCaughtException(Exception):
   def __init__(self, value):
@@ -79,7 +82,7 @@ def makeOutputStream(outputFileName):
 def makeOutputFileName(logFileRoot, dateStamp):
   return  logFileRoot + "." + createDateStamp() + ".log"
 
-def readConfigData(configFilename,ser):
+def readConfigData(configFilename):
   with open(configFilename,'r') as configStream:
     configData = configStream.read()
 
@@ -87,7 +90,7 @@ def readConfigData(configFilename,ser):
 
   bannerToKeyMap = dataDict["bannerToKeyMap"]
 
-  idKey = getIdKey(bannerToKeyMap,ser)
+  idKey = getIdKey(bannerToKeyMap)
   
   assert dataDict.has_key(idKey),\
     "Could not find key '%s' in file '%s'. Keys in file are '%s'" %\
@@ -98,18 +101,24 @@ def readConfigData(configFilename,ser):
 def handler(signum, frame):
   raise MySignalCaughtException("Signal caught")
 
-def getIdKey(bannerToKeyMap,ser):
+def getIdKey(bannerToKeyMap):
+  global mySerial
+  assert mySerial, "The varialble mySerial is null"
   idKey = None
-  ser.write('i')
-  buffer = ser.read(ser.inWaiting())
-  lines = buffer.split('\r\n')
-  for line in lines:
-    if line:
-      print line
-      for banner in bannerToKeyMap.keys():
-        if banner in line:
-          idKey = bannerToKeyMap[banner]
-          break
+  for i in range(5):
+    if not idKey:
+      print "Attempting to get identification line..."
+      mySerial.write('i')
+      buffer = mySerial.read(mySerial.inWaiting())
+      lines = buffer.split('\r\n')
+      for line in lines:
+        if line:
+          print line
+          for banner in bannerToKeyMap.keys():
+            if banner in line:
+              idKey = bannerToKeyMap[banner]
+              break
+      time.sleep(3)
 
   assert idKey, "Could not match any banner in lines to bannerToKeyMap\n" +\
     "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannerToKeyMap)
@@ -117,7 +126,40 @@ def getIdKey(bannerToKeyMap,ser):
   print "Found idKey:", idKey
   return idKey
 
+def readInputFromTerminal(prompt,timeout):
+  inputLine=None
+  print "You have %s seconds to enter input..." % timeout
+  print prompt,
+  sys.stdout.flush()
+  rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+  if rlist:
+    inputLine = sys.stdin.readline().strip()
+    print "Read: %s\n" % inputLine
+  return inputLine
+
+def processTerminalInput(timeout):
+  global mySerial
+  assert mySerial, "The varialble mySerial is null"
+  while True:
+    inputLine = readInputFromTerminal("Command [continue, quit]: ",timeout)
+    if not inputLine:
+      print "\nNo input read. Moving on..."
+      return
+    else:
+      if inputLine.lower() == 'continue':
+        return
+      if inputLine.lower() == 'quit':
+        sys.exit(0)
+      mySerial.write(inputLine)
+      buffer = mySerial.read(mySerial.inWaiting())
+      lines = buffer.split('\r\n')
+      for line in lines:
+        if line:
+          print line
+    timeout = 30
+
 def main(cmdLineArgs):
+  global mySerial
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
   serialPort     = cla[0]
   configFilename = cla[1]
@@ -131,11 +173,11 @@ def main(cmdLineArgs):
     print "configFilename =", configFilename
     print "logFileRoot    =", logFileRoot
 
-  ser = serial.Serial(serialPort,115200)
+  mySerial = serial.Serial(serialPort,115200)
   time.sleep(5)
   localFrequency = 5
 
-  dataDict = readConfigData(configFilename,ser)
+  dataDict = readConfigData(configFilename)
 
   if clo.verbose or clo.noOp:
     print "dataDict:"
@@ -158,8 +200,8 @@ def main(cmdLineArgs):
   signal.signal(signal.SIGALRM, handler)
 
   while True:
-    ser.write('?')
-    buffer = ser.read(ser.inWaiting())
+    mySerial.write('?')
+    buffer = mySerial.read(mySerial.inWaiting())
     lines = buffer.split('\r\n')
     for line in lines:
       if line:
@@ -219,8 +261,7 @@ def main(cmdLineArgs):
             except:
               print "  Sorry, could not print creation error.  Continuing..."
 
-    print "Sleeping for %s seconds" % localFrequency
-    time.sleep(localFrequency)
+    processTerminalInput(localFrequency)
 
   outputStream.close()
 
