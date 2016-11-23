@@ -16,7 +16,7 @@ defaultLogFileRoot = "/tmp/"+execBaseName
 
 def setupCmdLineArgs(cmdLineArgs):
   usage = """\
-usage: %prog [-h|--help] [Options] serial_port id config_file
+usage: %prog [-h|--help] [Options] serial_port config_file
        where:
          -h|--help to see Options
 
@@ -25,9 +25,6 @@ usage: %prog [-h|--help] [Options] serial_port id config_file
            "dmesg | grep tty" and look at last serial port added.
            Usually looks something like /dev/ttyACM0 or /dev/ttyUSB0
            and is at the bottom of the grep output.
-         id_key = 
-           The key of which dictionary to read in config_file.
-           This maps the identifcation of the Aurdino to connect to.
          config_file = 
            File containing configuration data in the form of a dictionary
            where the id_key is used as described above
@@ -61,7 +58,7 @@ usage: %prog [-h|--help] [Options] serial_port id config_file
       print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
 
   if len(cmdLineArgs) != 3:
-    parser.error("Must specify a serial port, id and config filename on the command line.")
+    parser.error("Must specify a serial port and config filename on the command line.")
 
   return (cmdLineOptions, cmdLineArgs)
 
@@ -74,21 +71,41 @@ def makeOutputStream(outputFileName):
 def makeOutputFileName(logFileRoot, dateStamp):
   return  logFileRoot + "." + createDateStamp() + ".log"
 
-def readConfigData(configFilename, idKey):
+def readConfigData(configFilename):
   with open(configFilename,'r') as configStream:
     configData = configStream.read()
 
   dataDict = ast.literal_eval(configData)
+
+  bannerToKeyMap = dataDict["bannerToKeyMap"]
+
+  idKey = getKey(bannerToKeyMap)
+  
   assert dataDict.has_key(idKey),\
     "Could not find key '%s' in file '%s'. Keys in file are '%s'" %\
     (idKey, configFilename, dataDict.keys())
 
   return dataDict[idKey]
 
+def getKey(bannerToKeyMap):
+  ser.write('i')
+  buffer = ser.read(ser.inWaiting())
+  lines = buffer.split('\r\n')
+  for line in lines:
+    if line:
+      for banner in bannerToKeyMap.getKeys():
+        if banner in line:
+          key = bannerToKeyMap[banner]
+          break
+
+   assert key, "Could not match any banner in lines to bannerToKeyMap\n" +\
+     "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannertoKeyMap)
+
+   return key
+
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
   serialPort     = cla[0]
-  idKey          = cla[1]
   configFilename = cla[2]
   logFileRoot    = clo.logFileRoot
   
@@ -100,7 +117,7 @@ def main(cmdLineArgs):
     print "configFilename =", configFilename
     print "logFileRoot    =", logFileRoot
 
-  dataDict = readConfigData(configFilename, idKey)
+  dataDict = readConfigData(configFilename)
 
   if clo.verbose or clo.noOp:
     print "dataDict:"
@@ -109,10 +126,10 @@ def main(cmdLineArgs):
   if clo.noOp:
     sys.exit(0)
 
-  channel_id  = dataDict["channel_id"]
-  write_key   = dataDict["write_key"]
-  frequency   = dataDict["update_frequency"]
-  channelKeys = dataDict["channel_keys"]
+  channel_id     = dataDict["channel_id"]
+  write_key      = dataDict["write_key"]
+  frequency      = dataDict["update_frequency"]
+  channelKeys    = dataDict["channel_keys"]
 
   channel = thingspeak.Channel(id=channel_id,write_key=write_key)
 
@@ -129,7 +146,8 @@ def main(cmdLineArgs):
     lines = buffer.split('\r\n')
     for line in lines:
       if line:
-        print '%s' % line.strip()
+        line = line.strip()
+        print '%s' % line
         if line[0] == "{":
           localFrequency = frequency
           if currentDateStamp != createDateStamp():
