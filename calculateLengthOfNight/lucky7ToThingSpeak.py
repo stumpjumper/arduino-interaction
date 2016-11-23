@@ -57,7 +57,7 @@ usage: %prog [-h|--help] [Options] serial_port config_file
     for index in range(0,len(cmdLineArgs)):
       print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
 
-  if len(cmdLineArgs) != 3:
+  if len(cmdLineArgs) != 2:
     parser.error("Must specify a serial port and config filename on the command line.")
 
   return (cmdLineOptions, cmdLineArgs)
@@ -71,7 +71,7 @@ def makeOutputStream(outputFileName):
 def makeOutputFileName(logFileRoot, dateStamp):
   return  logFileRoot + "." + createDateStamp() + ".log"
 
-def readConfigData(configFilename):
+def readConfigData(configFilename,ser):
   with open(configFilename,'r') as configStream:
     configData = configStream.read()
 
@@ -79,7 +79,7 @@ def readConfigData(configFilename):
 
   bannerToKeyMap = dataDict["bannerToKeyMap"]
 
-  idKey = getKey(bannerToKeyMap)
+  idKey = getIdKey(bannerToKeyMap,ser)
   
   assert dataDict.has_key(idKey),\
     "Could not find key '%s' in file '%s'. Keys in file are '%s'" %\
@@ -87,26 +87,29 @@ def readConfigData(configFilename):
 
   return dataDict[idKey]
 
-def getKey(bannerToKeyMap):
+def getIdKey(bannerToKeyMap,ser):
+  idKey = None
   ser.write('i')
   buffer = ser.read(ser.inWaiting())
   lines = buffer.split('\r\n')
   for line in lines:
     if line:
-      for banner in bannerToKeyMap.getKeys():
+      print line
+      for banner in bannerToKeyMap.keys():
         if banner in line:
-          key = bannerToKeyMap[banner]
+          idKey = bannerToKeyMap[banner]
           break
 
-  assert key, "Could not match any banner in lines to bannerToKeyMap\n" +\
-    "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannertoKeyMap)
+  assert idKey, "Could not match any banner in lines to bannerToKeyMap\n" +\
+    "lines:\n%s\nbannerToKeyMap:\n%s" % (lines, bannerToKeyMap)
 
-  return key
+  print "Found idKey:", idKey
+  return idKey
 
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
   serialPort     = cla[0]
-  configFilename = cla[2]
+  configFilename = cla[1]
   logFileRoot    = clo.logFileRoot
   
   if clo.verbose or clo.noOp:
@@ -117,7 +120,11 @@ def main(cmdLineArgs):
     print "configFilename =", configFilename
     print "logFileRoot    =", logFileRoot
 
-  dataDict = readConfigData(configFilename)
+  ser = serial.Serial(serialPort,115200)
+  time.sleep(5)
+  localFrequency = 5
+
+  dataDict = readConfigData(configFilename,ser)
 
   if clo.verbose or clo.noOp:
     print "dataDict:"
@@ -136,10 +143,6 @@ def main(cmdLineArgs):
   currentDateStamp = None
   outputStream     = None
 
-  ser = serial.Serial(serialPort,115200)
-  time.sleep(5)
-  localFrequency = 5
-
   while True:
     ser.write('?')
     buffer = ser.read(ser.inWaiting())
@@ -147,7 +150,7 @@ def main(cmdLineArgs):
     for line in lines:
       if line:
         line = line.strip()
-        print '%s' % line
+        print line
         if line[0] == "{":
           localFrequency = frequency
           if currentDateStamp != createDateStamp():
