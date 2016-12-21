@@ -16,6 +16,7 @@ modeMap = {'O':0,'B':1,'E':2,'N':3,'P':4,'M':5,'D':6}
 (execDirName,execName) = os.path.split(sys.argv[0])
 execBaseName = os.path.splitext(execName)[0]
 defaultLogFileRoot = "/tmp/"+execBaseName
+defaultConfigFilename  = "lucky7ToThingSpeak.conf"
 
 mySerial = None
 
@@ -27,18 +28,15 @@ class MySignalCaughtException(Exception):
 
 def setupCmdLineArgs(cmdLineArgs):
   usage = """\
-usage: %prog [-h|--help] [Options] serial_port config_file
+usage: %prog [-h|--help] [options] serial_port
        where:
-         -h|--help to see Options
+         -h|--help to see options
 
          serial_port =
            Serial port from which to read. Hint: Do a 
            "dmesg | grep tty" and look at last serial port added.
            Usually looks something like /dev/ttyACM0 or /dev/ttyUSB0
            and is at the bottom of the grep output.
-         config_file = 
-           File containing configuration data in the form of a dictionary
-           where the id_key is used as described above
 """
   parser = OptionParser(usage)
   help="Verbose mode."
@@ -55,10 +53,17 @@ usage: %prog [-h|--help] [Options] serial_port config_file
                     help=help)
   help="Root name of logfile.  Default is '%s', " % defaultLogFileRoot
   help+="which produces the log file '%s.2015-08-17.log'" % defaultLogFileRoot
-  parser.add_option("-l", "--logfileroot",
+  parser.add_option("-l", "--logFileRoot",
                     action="store", type="string", 
                     default=defaultLogFileRoot,
                     dest="logFileRoot",
+                    help=help)
+  help ="Name of file containing configuration data in the form of "
+  help+="a dictionary.  Default is '%s'" % defaultConfigFilename
+  parser.add_option("-c", "--configFile",
+                    action="store", type="string", 
+                    default=defaultConfigFilename,
+                    dest="configFilename",
                     help=help)
 
   (cmdLineOptions, cmdLineArgs) = parser.parse_args(cmdLineArgs)
@@ -68,8 +73,8 @@ usage: %prog [-h|--help] [Options] serial_port config_file
     for index in range(0,len(cmdLineArgs)):
       print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
 
-  if len(cmdLineArgs) != 2:
-    parser.error("Must specify a serial port and config filename on the command line.")
+  if len(cmdLineArgs) != 1:
+    parser.error("Must specify a serial port on the command line.")
 
   return (cmdLineOptions, cmdLineArgs)
 
@@ -162,17 +167,18 @@ def main(cmdLineArgs):
   global mySerial
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
   serialPort     = cla[0]
-  configFilename = cla[1]
   logFileRoot    = clo.logFileRoot
+  configFilename = clo.configFilename
   
   if clo.verbose or clo.noOp:
     print "verbose        =", clo.verbose
     print "noOp           =", clo.noOp
     print "serialPort     =", serialPort
-    print "idKey          =", idKey
     print "configFilename =", configFilename
     print "logFileRoot    =", logFileRoot
 
+  sys.exit(0)
+  
   mySerial = serial.Serial(serialPort,115200)
   time.sleep(5)
   localFrequency = 5
