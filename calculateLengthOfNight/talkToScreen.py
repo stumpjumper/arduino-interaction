@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import sys
+import re
 from optparse import OptionParser
-from subprocess import call, check_call
+from subprocess import call, check_call, check_output, CalledProcessError
 
 class TalkToScreen(object):
 
@@ -35,8 +36,7 @@ class TalkToScreen(object):
   def startScreen(self):
     assert self.screenName, "startScreen() called before self.screenName set"
 
-    returnValue = self.checkScreen()
-    if returnValue != 0:
+    if self.screenAlreadyRunning():
       print >>sys.stderr,\
             "Screen with name '%s' already exists." % self.screenName,
       print >>sys.stderr,\
@@ -55,8 +55,13 @@ class TalkToScreen(object):
     check_call(cmdList)
 
   def executCmdInScreen(self, cmd):
-    if self.checkScreen():
-      print >>sys.stderr, msg
+    if not self.screenAlreadyRunning():
+      print >>sys.stderr,\
+            "Screen with name '%s' does not exists." % self.screenName,
+      print >>sys.stderr,\
+            "Screen must exist to run command inside it."
+      print >>sys.stderr, "Screen list:"
+      TalkToScreen.printScreenList(self.verbose, sys.stderr)      
       return
     
     cmdPrefix = self.getCmdPrefix()
@@ -64,9 +69,9 @@ class TalkToScreen(object):
     if cmd[-1:] != "\n":
       cmd += "\n"
 
-    fullCmdList = cmdPrefix.append(cmd)
+    fullCmdList = cmdPrefix + [cmd]
     if self.verbose:
-      print "cmd: %s" % cmd
+      print "cmd: %s" % fullCmdList
 
     check_call(fullCmdList)
 
@@ -75,42 +80,50 @@ class TalkToScreen(object):
 
     self.executCmdInScreen("exit")
 
-  def checkScreen(self):
-    assert self.screenName, "startScreen() called before self.screenName set"
-
-    msg = 0
+  @staticmethod
+  def getScreenList(verbose=False):
 
     cmdList = ["screen","-ls"]
-    if self.verbose:
+    if verbose:
       print "cmd: %s" % cmdList
 
     output = None
     try:
-      output = ceck_output(cmdList)
+      output = check_output(cmdList)
     except CalledProcessError as e:
       output = e.output
 
+    return output
+
+  @staticmethod
+  def printScreenList(verbose=False, stream=sys.stdout):
+    
+    output = TalkToScreen.getScreenList(verbose)
+    print >>stream, output
+
+  def screenAlreadyRunning(self):
+    assert self.screenName, "startScreen() called before self.screenName set"
+
+    msg = 0
+
+    output = TalkToScreen.getScreenList(self.verbose)
+
+    screenExists = False
     for line in output.splitlines():
-      if self.screenName in line
-      more code needed here and below, and maybe look for \d\d\d.self.screenName
-      
+      m = re.search('\d+\.%s'%self.screenName,line)
+      if m:
+        if self.verbose:
+          print "Found screen:"
+          print line
+        screenExists = True
+        break
 
-    status = call(cmdList)
-    if status != 0:
-      msg = "Error found when trying to located screen session with name '%s'"\
-            % self.screenName
-    if status == 9:
-      msg += "\nDirectory without a session."
-    if status == 10:
-      msg += "\nDirectory with running but not attachable sessions."
-
-    return msg
-
+    return screenExists
 
 def setupCmdLineArgs(cmdLineArgs):
   usage =\
 """
-usage: %prog [-h|--help] [options] screen_name
+usage: %prog [-h|--help] [options] [screen_name]
        where:
          -h|--help to see options
 
@@ -120,6 +133,8 @@ usage: %prog [-h|--help] [options] screen_name
 
        Rules: -s, -r and -e can be used together in any combination.  They 
        will be executed in the order: -s, all -r's, then -e.
+
+       Note: A screen_name must be specified if -s, -r or -e is used.
 """
 
   parser = OptionParser(usage)
@@ -130,16 +145,16 @@ usage: %prog [-h|--help] [options] screen_name
                     dest="verbose",
                     help=help)
 
+  help="List running screens"
+  parser.add_option("-l", "--list",
+                    action="store_true", default=False,
+                    dest="listScreens",
+                    help=help)
+
   help="Start a screen with given name"
   parser.add_option("-s", "--start",
                     action="store_true", default=False,
                     dest="startScreen",
-                    help=help)
-
-  help="Exit named screen"
-  parser.add_option("-e", "--exit",
-                    action="store_true", default=False,
-                    dest="exitScreen",
                     help=help)
 
   help="Run command in named screen. You can use multiple -r arguments "+\
@@ -151,36 +166,49 @@ usage: %prog [-h|--help] [options] screen_name
                     dest="runCmd",
                     help=help)
 
+  help="Exit named screen"
+  parser.add_option("-e", "--exit",
+                    action="store_true", default=False,
+                    dest="exitScreen",
+                    help=help)
+
   (cmdLineOptions, cmdLineArgs) = parser.parse_args(cmdLineArgs)
+  clo = cmdLineOptions
 
   if cmdLineOptions.verbose:
     print "cmdLineOptions:",cmdLineOptions
     for index in range(0,len(cmdLineArgs)):
       print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
 
-  if len(cmdLineArgs) != 1:
-    parser.error("A screen name must be given on the command line")
+  if (clo.startScreen or clo.runCmd or clo.exitScreen) and len(cmdLineArgs) != 1:
+    parser.error("If -s, -r or -e are specified, a screen name must be"+\
+                 " given on the command line")
 
   return (cmdLineOptions, cmdLineArgs)
 
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
-  screenName = cla[0]
 
-  screen = TalkToScreen.createWithName(screenName)
+  if (clo.startScreen or clo.runCmd or clo.exitScreen):
+    screenName = cla[0]
 
-  if clo.verbose:
-    screen.verboseModeOn()
+    screen = TalkToScreen.createWithName(screenName)
 
-  if clo.startScreen:
-    screen.startScreen()
+    if clo.verbose:
+      screen.verboseModeOn()
 
-  if clo.runCmd:
-    for cmd in runCmd:
-      screen.executCmdInScreen(cmd)
+    if clo.startScreen:
+      screen.startScreen()
 
-  if clo.exitScreen:
-    screen.exitScreen()
+    if clo.runCmd:
+      for cmd in clo.runCmd:
+        screen.executCmdInScreen(cmd)
+
+    if clo.exitScreen:
+      screen.exitScreen()
+
+  if clo.listScreens:
+    TalkToScreen.printScreenList(clo.verbose)
 
 if (__name__ == '__main__'):
   main(sys.argv[1:])
