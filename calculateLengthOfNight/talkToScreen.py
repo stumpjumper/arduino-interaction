@@ -104,8 +104,6 @@ class TalkToScreen(object):
   def screenAlreadyRunning(self):
     assert self.screenName, "startScreen() called before self.screenName set"
 
-    msg = 0
-
     output = TalkToScreen.getScreenList(self.verbose)
 
     screenExists = False
