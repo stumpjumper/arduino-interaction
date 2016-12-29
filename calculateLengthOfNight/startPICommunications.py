@@ -84,9 +84,15 @@ def main(cmdLineArgs):
       print "Starting screen with name '%s'" % screenName
     screen.startScreen()
 
+  sleepSeconds = 300
   cmdList = []
   cmdList.append("cd '%s'" % execDir)
+  cmdList.append("while :; do")
+  cmdList.append("date")
   cmdList.append("./lucky7ToThingSpeak.py %s" % serialPort)
+  cmdList.append("echo sleeping for %s seconds..." % sleepSeconds)
+  cmdList.append("sleep %s" % sleepSeconds)
+  cmdList.append("done")
 
   for cmd in cmdList:
     if clo.noOp:
