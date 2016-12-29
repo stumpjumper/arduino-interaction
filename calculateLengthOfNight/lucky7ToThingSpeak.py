@@ -177,8 +177,6 @@ def main(cmdLineArgs):
     print "configFilename =", configFilename
     print "logFileRoot    =", logFileRoot
 
-  sys.exit(0)
-  
   mySerial = serial.Serial(serialPort,115200)
   time.sleep(5)
   localFrequency = 5
