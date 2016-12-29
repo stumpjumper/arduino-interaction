@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import sys
+import os
 from optparse import OptionParser
 
 from talkToScreen import TalkToScreen
+
+execDir = os.path.dirname(os.path.realpath(__file__))
 
 def setupCmdLineArgs(cmdLineArgs):
   usage =\
@@ -13,7 +16,10 @@ usage: %prog [-h|--help] [options] serial_port screen_name
          -h|--help to see options
 
          serial_port =
-          Serial port target RaspberryPi is connected to.
+           Serial port to connect to. Hint: Do a 
+           "dmesg | grep tty" and look at last serial port added.
+           Usually looks something like /dev/ttyACM0 or /dev/ttyUSB0
+           and is at the bottom of the grep output.
 
          screen_name =
           The name of the screen in which to run the communication program
@@ -78,14 +84,19 @@ def main(cmdLineArgs):
       print "Starting screen with name '%s'" % screenName
     screen.startScreen()
 
-  cmd = "lucky7toThingSpeak %s" % serialPort
+  cmdList = []
+  cmdList.append("cd '%s'" % execDir)
+  cmdList.append("./lucky7toThingSpeak %s" % serialPort)
 
-  if clo.noOp:
-    print "Would be executing the following in screen '%s':\n" % screenName, cmd
-  else:
-    if clo.verbose:
-      print "Executing the following command in screen '%s':\n" % screenName, cmd
-    screen.executCmdInScreen(cmd)
+  for cmd in cmdList:
+    if clo.noOp:
+      print "Would be executing the following in screen '%s':\n" \
+            % screenName, cmd
+    else:
+      if clo.verbose:
+        print "Executing the following command in screen '%s':\n" \
+              % screenName, cmd
+      screen.executCmdInScreen(cmd)
 
 if (__name__ == '__main__'):
   main(sys.argv[1:])
