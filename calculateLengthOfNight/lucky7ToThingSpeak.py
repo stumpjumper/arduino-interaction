@@ -33,7 +33,7 @@ usage: %prog [-h|--help] [options] serial_port
          -h|--help to see options
 
          serial_port =
-           Serial port from which to read. Hint: Do a 
+           Serial port to connect to. Hint: Do a 
            "dmesg | grep tty" and look at last serial port added.
            Usually looks something like /dev/ttyACM0 or /dev/ttyUSB0
            and is at the bottom of the grep output.
