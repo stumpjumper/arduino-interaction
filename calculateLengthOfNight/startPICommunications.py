@@ -86,7 +86,7 @@ def main(cmdLineArgs):
 
   cmdList = []
   cmdList.append("cd '%s'" % execDir)
-  cmdList.append("./lucky7toThingSpeak %s" % serialPort)
+  cmdList.append("./lucky7ToThingSpeak.py %s" % serialPort)
 
   for cmd in cmdList:
     if clo.noOp:
