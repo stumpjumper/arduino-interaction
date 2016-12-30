@@ -57,8 +57,6 @@ usage: %prog [-h|--help] [options] serial_port screen_name
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
 
-  (clo, cla) = setupCmdLineArgs(cmdLineArgs)
-
   serialPort = cla[0]
   screenName = cla[1]
 
