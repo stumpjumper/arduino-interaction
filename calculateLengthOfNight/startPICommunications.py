@@ -57,8 +57,6 @@ usage: %prog [-h|--help] [options] serial_port screen_name
 def main(cmdLineArgs):
   (clo, cla) = setupCmdLineArgs(cmdLineArgs)
 
-  (clo, cla) = setupCmdLineArgs(cmdLineArgs)
-
   serialPort = cla[0]
   screenName = cla[1]
 
@@ -90,7 +88,7 @@ def main(cmdLineArgs):
   cmdList.append("while :; do")
   cmdList.append("date")
   cmdList.append("./lucky7ToThingSpeak.py %s" % serialPort)
-  cmdList.append("echo sleeping for %s seconds..." % sleepSeconds)
+  cmdList.append("echo 'Sleeping for %s seconds (Ctrl-c to exit)...'" % sleepSeconds)
   cmdList.append("sleep %s" % sleepSeconds)
   cmdList.append("done")
 
