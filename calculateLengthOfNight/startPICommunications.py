@@ -100,7 +100,7 @@ def main(cmdLineArgs):
       if clo.verbose:
         print "Executing the following command in screen '%s':\n" \
               % screenName, cmd
-      screen.executCmdInScreen(cmd)
+      screen.executeCmdInScreen(cmd)
 
 if (__name__ == '__main__'):
   main(sys.argv[1:])
