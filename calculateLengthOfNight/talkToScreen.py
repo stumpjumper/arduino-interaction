@@ -2,6 +2,7 @@
 
 import sys
 import re
+import time
 from optparse import OptionParser
 from subprocess import call, check_call, check_output, CalledProcessError
 
@@ -54,7 +55,7 @@ class TalkToScreen(object):
     
     check_call(cmdList)
 
-  def executCmdInScreen(self, cmd):
+  def executeCmdInScreen(self, cmd):
     if not self.screenAlreadyRunning():
       print >>sys.stderr,\
             "Screen with name '%s' does not exists." % self.screenName,
@@ -78,7 +79,7 @@ class TalkToScreen(object):
   def exitScreen(self):
     assert self.screenName, "startScreen() called before self.screenName set"
 
-    self.executCmdInScreen("exit")
+    self.executeCmdInScreen("exit")
 
   @staticmethod
   def getScreenList(verbose=False):
@@ -121,7 +122,9 @@ class TalkToScreen(object):
 def setupCmdLineArgs(cmdLineArgs):
   usage =\
 """
-usage: %prog [-h|--help] [options] [screen_name]
+usage: %prog [-h|--help] [options] screen_name
+       %prog [-h|--help] 
+
        where:
          -h|--help to see options
 
@@ -129,10 +132,11 @@ usage: %prog [-h|--help] [options] [screen_name]
           The name of the screen to start, send commands to, or
           exit.
 
-       Rules: -s, -r and -e can be used together in any combination.  They 
-       will be executed in the order: -s, all -r's, then -e.
-
-       Note: A screen_name must be specified if -s, -r or -e is used.
+       Rules:
+         - A screen_name must be specified if -s, -r or -e is used.
+         - The flags -s, -r and -e can be used together in any combination.  
+           They will be executed in the order: -s, all -r's, then -e.
+         - Without -s, -r or -e, the current screens will be listed
 """
 
   parser = OptionParser(usage)
@@ -178,9 +182,20 @@ usage: %prog [-h|--help] [options] [screen_name]
     for index in range(0,len(cmdLineArgs)):
       print "cmdLineArgs[%s] = '%s'" % (index, cmdLineArgs[index])
 
-  if (clo.startScreen or clo.runCmd or clo.exitScreen) and len(cmdLineArgs) != 1:
+  if len(cmdLineArgs) > 1:
+    parser.error("Can only specify one command line argument. Found %s: %s"\
+                 % (len(cmdLineArgs), cmdLineArgs))
+  elif (clo.startScreen or clo.runCmd or clo.exitScreen) and len(cmdLineArgs) != 1:
     parser.error("If -s, -r or -e are specified, a screen name must be"+\
                  " given on the command line")
+  elif (not (clo.startScreen or clo.runCmd or clo.exitScreen) ) and \
+         len(cmdLineArgs) > 0:
+    parser.error("Found unneeded argument %s given when" % cmdLineArgs +\
+                 " -s, -r or -e are not used" )
+  elif (not (clo.startScreen or clo.runCmd or clo.exitScreen) ):
+    clo.listScreens = True
+    if clo.verbose:
+      print "Flags -s, -r or -e not given, activating --list flag"
 
   return (cmdLineOptions, cmdLineArgs)
 
@@ -200,7 +215,7 @@ def main(cmdLineArgs):
 
     if clo.runCmd:
       for cmd in clo.runCmd:
-        screen.executCmdInScreen(cmd)
+        screen.executeCmdInScreen(cmd)
 
     if clo.exitScreen:
       screen.exitScreen()
